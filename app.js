@@ -1,10 +1,8 @@
-/* Time Tracker v4 + Import */
+/* Time Tracker v4 */
 const taskList = document.getElementById('taskList');
 const addBtn = document.getElementById('addBtn');
 const exportBtn = document.getElementById('exportBtn');
 const taskName = document.getElementById('taskName');
-const importBtn = document.getElementById('importBtn');
-const importFile = document.getElementById('importFile');
 
 let tasks = {}; // id -> {title, running, startTime, elapsedMs, lastStartISO}
 let timers = {};
@@ -77,6 +75,7 @@ function start(id) {
 function pause(id) {
   const t = tasks[id];
   if (!t.running) return;
+  t.running = false;
   const now = Date.now();
   t.elapsedMs += now - t.startTime;
   t.startTime = 0;
@@ -194,26 +193,6 @@ function exportCSV() {
   a.remove();
 }
 
-/* Import CSV */
-function importCSV(csvText) {
-  const lines = csvText.split('\n').slice(1); // skip header
-  lines.forEach(line => {
-    if (!line.trim()) return;
-    const [title, startISO, totalSec] = line.split(',').map(s => s.replace(/"/g,''));
-    const id = 't_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
-    tasks[id] = {
-      title: title || 'Task',
-      running: false,
-      startTime: 0,
-      elapsedMs: (parseInt(totalSec)||0) * 1000,
-      lastStartISO: startISO || ''
-    };
-    renderTask(id);
-  });
-  save();
-}
-
-/* Event listeners */
 addBtn.addEventListener('click', () => {
   const name = taskName.value.trim();
   addTask(name);
@@ -222,19 +201,5 @@ addBtn.addEventListener('click', () => {
 });
 
 exportBtn.addEventListener('click', exportCSV);
-
-importBtn.addEventListener('click', () => {
-  if (!importFile.files.length) return;
-  const file = importFile.files[0];
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      importCSV(e.target.result);
-    } catch(err) {
-      alert('Failed to import tasks: ' + err.message);
-    }
-  };
-  reader.readAsText(file);
-});
 
 load();

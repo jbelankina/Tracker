@@ -1,5 +1,4 @@
-*{box-sizing:border-box}
-body{font-family:system-ui, Arial, sans-serif;margin:0;padding:0;background:#f6f7fb;color:#222}
+*{box-sizing:border-box}body{font-family:system-ui, Arial, sans-serif;margin:0;padding:0;background:#f6f7fb;color:#222}
 header{background:#1f6feb;color:#fff;padding:12px 16px}
 h1{margin:0;font-size:20px}
 #add-task{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;background:#fff;position:sticky;top:0;border-bottom:1px solid #e5e7eb}
@@ -7,8 +6,6 @@ h1{margin:0;font-size:20px}
 button{padding:10px 12px;border:0;border-radius:8px;cursor:pointer}
 #addBtn{background:#22c55e;color:#fff}
 #exportBtn{background:#0ea5e9;color:#fff}
-#importBtn{background:#f97316;color:#fff} /* new import button color */
-#importFile{padding:6px 10px;border:1px solid #cbd5e1;border-radius:8px;cursor:pointer;background:#fff;color:#111827}
 #taskList{padding:8px 16px}
 .task{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin:10px 0;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
 .meta{display:flex;flex-direction:column;gap:6px}
@@ -26,4 +23,3 @@ button{padding:10px 12px;border:0;border-radius:8px;cursor:pointer}
   .task{grid-template-columns:1fr}
   .controls{justify-content:flex-start}
 }
-
