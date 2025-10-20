@@ -1,40 +1,53 @@
-/* Simple Time Tracker with localStorage persistence */
+/* Time Tracker v2: Start, Pause, Reset, per-task start timestamp, ms precision */
 const taskList = document.getElementById('taskList');
 const addBtn = document.getElementById('addBtn');
 const exportBtn = document.getElementById('exportBtn');
-const clearBtn = document.getElementById('clearBtn');
 const taskName = document.getElementById('taskName');
 
-let tasks = {}; // id -> {title, running, startTime, elapsedMs}
-let timers = {}; // id -> interval handle
+let tasks = {}; // id -> {title, running, startTime, elapsedMs, lastStartISO}
+let timers = {};
 
 function load() {
-  const raw = localStorage.getItem('tt_tasks');
+  const raw = localStorage.getItem('tt_tasks_v2');
   tasks = raw ? JSON.parse(raw) : {};
   renderAll();
 }
 
 function save() {
-  localStorage.setItem('tt_tasks', JSON.stringify(tasks));
+  localStorage.setItem('tt_tasks_v2', JSON.stringify(tasks));
 }
 
 function fmt(ms) {
-  const total = Math.floor(ms / 1000);
-  const h = Math.floor(total / 3600).toString().padStart(2,'0');
-  const m = Math.floor((total % 3600) / 60).toString().padStart(2,'0');
-  const s = (total % 60).toString().padStart(2,'0');
-  return `${h}:${m}:${s}`;
+  const totalMs = Math.max(0, Math.floor(ms));
+  const totalSec = Math.floor(totalMs / 1000);
+  const h = Math.floor(totalSec / 3600).toString().padStart(2,'0');
+  const m = Math.floor((totalSec % 3600) / 60).toString().padStart(2,'0');
+  const s = (totalSec % 60).toString().padStart(2,'0');
+  const milli = (totalMs % 1000).toString().padStart(3,'0');
+  return `${h}:${m}:${s}.${milli}`;
+}
+
+function tsISOWithMillis(date) {
+  const pad = (n,l=2)=>n.toString().padStart(l,'0');
+  const y = date.getFullYear();
+  const mo = pad(date.getMonth()+1);
+  const d = pad(date.getDate());
+  const h = pad(date.getHours());
+  const mi = pad(date.getMinutes());
+  const s = pad(date.getSeconds());
+  const ms = pad(date.getMilliseconds(),3);
+  return `${y}-${mo}-${d} ${h}:${mi}:${s}.${ms}`;
 }
 
 function addTask(title) {
   const id = 't_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
-  tasks[id] = { title: title || 'Task', running: false, startTime: 0, elapsedMs: 0 };
+  tasks[id] = { title: title || 'Task', running: false, startTime: 0, elapsedMs: 0, lastStartISO: '' };
   save();
   renderTask(id);
 }
 
 function removeTask(id) {
-  stop(id);
+  pause(id);
   delete tasks[id];
   save();
   document.getElementById(id)?.remove();
@@ -45,12 +58,16 @@ function start(id) {
   if (t.running) return;
   t.running = true;
   t.startTime = Date.now();
+  t.lastStartISO = tsISOWithMillis(new Date());
+if (t.elapsedMs < 5) {
+    t.lastStartISO = tsISOWithMillis(new Date());
+  }
   save();
-  timers[id] = setInterval(() => updateElapsed(id), 250);
+  timers[id] = setInterval(() => updateElapsed(id), 50);
   updateRowUI(id);
 }
 
-function stop(id) {
+function pause(id) {
   const t = tasks[id];
   if (!t.running) return;
   t.running = false;
@@ -85,11 +102,10 @@ function updateRowUI(id) {
   const t = tasks[id];
   const row = document.getElementById(id);
   if (!row) return;
-  row.querySelector('.badge').textContent = fmt(t.elapsedMs);
-  const startBtn = row.querySelector('.start');
-  const stopBtn = row.querySelector('.stop');
-  startBtn.disabled = t.running;
-  stopBtn.disabled = !t.running;
+  row.querySelector('.badge').textContent = t.running ? fmt(t.elapsedMs + (Date.now() - t.startTime)) : fmt(t.elapsedMs);
+  row.querySelector('.start-time').textContent = t.lastStartISO ? `Started: ${t.lastStartISO}` : 'Not started yet';
+  row.querySelector('.start').disabled = t.running;
+  row.querySelector('.pause').disabled = !t.running;
 }
 
 function renderTask(id) {
@@ -97,6 +113,9 @@ function renderTask(id) {
   const row = document.createElement('div');
   row.className = 'task';
   row.id = id;
+
+  const meta = document.createElement('div');
+  meta.className = 'meta';
 
   const title = document.createElement('input');
   title.className = 'title';
@@ -107,6 +126,12 @@ function renderTask(id) {
   badge.className = 'badge';
   badge.textContent = fmt(t.elapsedMs);
 
+  const startTime = document.createElement('div');
+  startTime.className = 'start-time';
+  startTime.textContent = t.lastStartISO ? `Started: ${t.lastStartISO}` : 'Not started yet';
+
+  meta.append(title, badge, startTime);
+
   const controls = document.createElement('div');
   controls.className = 'controls';
   const startBtn = document.createElement('button');
@@ -114,10 +139,10 @@ function renderTask(id) {
   startBtn.textContent = 'Start';
   startBtn.onclick = () => start(id);
 
-  const stopBtn = document.createElement('button');
-  stopBtn.className = 'btn stop';
-  stopBtn.textContent = 'Stop';
-  stopBtn.onclick = () => stop(id);
+  const pauseBtn = document.createElement('button');
+  pauseBtn.className = 'btn pause';
+  pauseBtn.textContent = 'Pause';
+  pauseBtn.onclick = () => pause(id);
 
   const resetBtn = document.createElement('button');
   resetBtn.className = 'btn reset';
@@ -129,14 +154,14 @@ function renderTask(id) {
   delBtn.textContent = 'Delete';
   delBtn.onclick = () => removeTask(id);
 
-  controls.append(startBtn, stopBtn, resetBtn, delBtn);
+  controls.append(startBtn, pauseBtn, resetBtn, delBtn);
 
-  row.append(title, badge, controls);
+  row.append(meta, controls);
   taskList.prepend(row);
 
   updateRowUI(id);
   if (t.running) {
-    timers[id] = setInterval(() => updateElapsed(id), 250);
+    timers[id] = setInterval(() => updateElapsed(id), 50);
   }
 }
 
@@ -147,10 +172,10 @@ function renderAll() {
 
 /* Export CSV */
 function exportCSV() {
-  const rows = [['Task','Total Seconds','Formatted']];
+  const rows = [['Task','Start timestamp','Total seconds','Formatted']];
   Object.values(tasks).forEach(t => {
     const totalSec = Math.floor(t.elapsedMs / 1000);
-    rows.push([t.title.replace(/"/g,'""'), totalSec, fmt(t.elapsedMs)]);
+    rows.push([t.title.replace(/"/g,'""'), t.lastStartISO || '', totalSec, fmt(t.elapsedMs)]);
   });
   const csv = rows.map(r => r.map(x => `"${x}"`).join(',')).join('\n');
   const blob = new Blob([csv], {type:'text/csv'});
@@ -162,15 +187,6 @@ function exportCSV() {
   a.remove();
 }
 
-/* Clear all data */
-function clearAll() {
-  if (!confirm('Delete all tasks and times')) return;
-  Object.keys(tasks).forEach(id => clearInterval(timers[id]));
-  tasks = {};
-  save();
-  renderAll();
-}
-
 addBtn.addEventListener('click', () => {
   const name = taskName.value.trim();
   addTask(name);
@@ -179,6 +195,5 @@ addBtn.addEventListener('click', () => {
 });
 
 exportBtn.addEventListener('click', exportCSV);
-clearBtn.addEventListener('click', clearAll);
 
 load();
