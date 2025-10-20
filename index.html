@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Simple Time Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Time Tracker</h1>
+  </header>
+
+  <main>
+    <section id="add-task">
+      <input id="taskName" type="text" placeholder="Task name">
+      <button id="addBtn">Add Task</button>
+      <button id="exportBtn">Export CSV</button>
+      <button id="clearBtn">Clear All</button>
+    </section>
+
+    <section id="taskList"></section>
+  </main>
+
+  <footer>
+    <small>Data is saved locally in your browser.</small>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
