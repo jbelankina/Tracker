@@ -1,4 +1,4 @@
-/* Time Tracker v2: Start, Pause, Reset, per-task start timestamp, ms precision */
+/* Time Tracker v4 */
 const taskList = document.getElementById('taskList');
 const addBtn = document.getElementById('addBtn');
 const exportBtn = document.getElementById('exportBtn');
@@ -8,13 +8,19 @@ let tasks = {}; // id -> {title, running, startTime, elapsedMs, lastStartISO}
 let timers = {};
 
 function load() {
-  const raw = localStorage.getItem('tt_tasks_v2');
-  tasks = raw ? JSON.parse(raw) : {};
+  const raw = localStorage.getItem('tt_tasks_v4');
+  if (raw) {
+    tasks = JSON.parse(raw);
+  } else {
+    const migrate = localStorage.getItem('tt_tasks_v3') || localStorage.getItem('tt_tasks_v2');
+    tasks = migrate ? JSON.parse(migrate) : {};
+  }
+  save();
   renderAll();
 }
 
 function save() {
-  localStorage.setItem('tt_tasks_v2', JSON.stringify(tasks));
+  localStorage.setItem('tt_tasks_v4', JSON.stringify(tasks));
 }
 
 function fmt(ms) {
@@ -58,8 +64,7 @@ function start(id) {
   if (t.running) return;
   t.running = true;
   t.startTime = Date.now();
-  t.lastStartISO = tsISOWithMillis(new Date());
-if (t.elapsedMs < 5) {
+  if (t.elapsedMs === 0) {
     t.lastStartISO = tsISOWithMillis(new Date());
   }
   save();
@@ -84,6 +89,7 @@ function reset(id) {
   t.running = false;
   t.startTime = 0;
   t.elapsedMs = 0;
+  t.lastStartISO = '';
   save();
   clearInterval(timers[id]);
   updateRowUI(id);
